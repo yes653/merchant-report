@@ -478,6 +478,23 @@ function displayWeekWithRange(w) {
   const m = w.match(/(\d{4})-W(\d{2})/);
   if (!m) return w;
   const year = parseInt(m[1]), weekNum = parseInt(m[2]);
+  // ISO 8601: 第1周是包含1月4日的那一周（周一为每周开始）
+  const jan4 = new Date(year, 0, 4);
+  const dayOfWeek = jan4.getDay() || 7; // 周日变7
+  const mondayOfWeek1 = new Date(jan4);
+  mondayOfWeek1.setDate(jan4.getDate() - dayOfWeek + 1);
+  const targetMonday = new Date(mondayOfWeek1);
+  targetMonday.setDate(mondayOfWeek1.getDate() + (weekNum - 1) * 7);
+  const sunday = new Date(targetMonday);
+  sunday.setDate(targetMonday.getDate() + 6);
+  const fmt = d => `${d.getMonth()+1}/${d.getDate()}`;
+  return `${year}年第${weekNum}周 (${fmt(targetMonday)}-${fmt(sunday)})`;
+}
+function displayAuditWeekWithRange(w) {
+  if (!w) return '--';
+  const m = w.match(/(\d{4})-W(\d{2})/);
+  if (!m) return w;
+  const year = parseInt(m[1]), weekNum = parseInt(m[2]);
   
   // 业务周定义：上周五 00:00 到 本周四 23:59
   // 标签 Wxx 是以“本周四”所在的 ISO 周为准
@@ -573,7 +590,7 @@ function populateWeekSelectors() {
   ['auditStartWeek', 'auditEndWeek'].forEach(id => {
     const sel = document.getElementById(id);
     sel.innerHTML = '<option value="">起始周</option>';
-    aWeeks.forEach(w => { const o = document.createElement('option'); o.value = w; o.textContent = displayWeekWithRange(w); sel.appendChild(o); });
+    aWeeks.forEach(w => { const o = document.createElement('option'); o.value = w; o.textContent = displayAuditWeekWithRange(w); sel.appendChild(o); });
     if (id === 'auditStartWeek' && aWeeks.length) sel.value = aWeeks[0];
     if (id === 'auditEndWeek' && aWeeks.length) sel.value = aWeeks[aWeeks.length - 1];
   });
@@ -885,7 +902,7 @@ function renderAuditChart() {
   if (auditChartInst) auditChartInst.destroy();
   auditChartInst = new Chart(ctx, {
     type: 'bar',
-    data: { labels: weeks.map(w => displayWeekWithRange(w)), datasets },
+    data: { labels: weeks.map(w => displayAuditWeekWithRange(w)), datasets },
     options: {
       responsive: true, maintainAspectRatio: false,
       plugins: { legend: { labels: { color: '#e0f0ff', font: { family: 'Rajdhani', size: 13 } } } },
@@ -911,7 +928,7 @@ function renderAuditTable() {
     const totalAll = totalApp + (d.sysReject || 0) + (d.manReject || 0);
     const rate = totalAll === 0 ? '--' : Math.round(totalApp / totalAll * 100) + '%';
     const rc = rate === '--' ? '' : rateClass(parseInt(rate));
-    return `<tr><td>${displayWeekWithRange(d.week)}</td><td class="approve-val">${d.sysApprove || 0}</td><td class="reject-val">${d.sysReject || 0}</td><td class="approve-val">${d.manApprove || 0}</td><td class="reject-val">${d.manReject || 0}</td><td class="rate-val ${rc}">${rate}</td></tr>`;
+    return `<tr><td>${displayAuditWeekWithRange(d.week)}</td><td class="approve-val">${d.sysApprove || 0}</td><td class="reject-val">${d.sysReject || 0}</td><td class="approve-val">${d.manApprove || 0}</td><td class="reject-val">${d.manReject || 0}</td><td class="rate-val ${rc}">${rate}</td></tr>`;
   }).join('');
   
   // 添加"加载更多"按钮
@@ -929,7 +946,7 @@ function renderAuditTable() {
         const totalAll = totalApp + (d.sysReject || 0) + (d.manReject || 0);
         const rate = totalAll === 0 ? '--' : Math.round(totalApp / totalAll * 100) + '%';
         const rc = rate === '--' ? '' : rateClass(parseInt(rate));
-        return `<tr><td>${displayWeekWithRange(d.week)}</td><td class="approve-val">${d.sysApprove || 0}</td><td class="reject-val">${d.sysReject || 0}</td><td class="approve-val">${d.manApprove || 0}</td><td class="reject-val">${d.manReject || 0}</td><td class="rate-val ${rc}">${rate}</td></tr>`;
+        return `<tr><td>${displayAuditWeekWithRange(d.week)}</td><td class="approve-val">${d.sysApprove || 0}</td><td class="reject-val">${d.sysReject || 0}</td><td class="approve-val">${d.manApprove || 0}</td><td class="reject-val">${d.manReject || 0}</td><td class="rate-val ${rc}">${rate}</td></tr>`;
       }).join('');
       footer.remove();
     });
