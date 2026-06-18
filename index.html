@@ -8,8 +8,7 @@
 <meta http-equiv="Expires" content="0">
 <title>商户准入周报看板</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="supabase-config.js"></script>
+<script src="data.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700;800;900&family=Rajdhani:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <style>
   :root {
@@ -466,7 +465,6 @@
 </div>
 
 <script>
-const db = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 let D = { persons: [], merchant: [], audit: [], lastUpdated: '' };
 
 // ─── 辅助函数 ─────────────────────────────
@@ -503,24 +501,22 @@ function rateClass(rate) {
 async function loadData() {
   document.getElementById('errorBanner').classList.add('hidden');
   try {
-    const [merchRes, auditRes] = await Promise.all([
-      db.from('merchant_weekly').select('*').order('week', { ascending: true }),
-      db.from('audit_weekly').select('*').order('week', { ascending: true }),
-    ]);
-    if (merchRes.error) throw merchRes.error;
-    if (auditRes.error) throw auditRes.error;
-
-    D.merchant = (merchRes.data || []).map(d => ({
-      id: d.id, week: d.week, person: d.person,
-      merchApprove: d.merch_approve, merchReject: d.merch_reject,
+    // 从本地 data.js 读取数据
+    if (typeof REPORT_DATA === 'undefined') {
+      throw new Error('REPORT_DATA not found');
+    }
+    
+    D.merchant = (REPORT_DATA.merchant || []).map(d => ({
+      id: d.id || null, week: d.week, person: d.person,
+      merchApprove: d.merchApprove, merchReject: d.merchReject,
     }));
-    D.audit = (auditRes.data || []).map(d => ({
-      id: d.id, week: d.week,
-      sysApprove: d.sys_approve, sysReject: d.sys_reject,
-      manApprove: d.man_approve, manReject: d.man_reject,
+    D.audit = (REPORT_DATA.audit || []).map(d => ({
+      id: d.id || null, week: d.week,
+      sysApprove: d.sysApprove, sysReject: d.sysReject,
+      manApprove: d.manApprove, manReject: d.manReject,
     }));
     D.persons = [...new Set(D.merchant.map(d => d.person))].filter(Boolean);
-    D.lastUpdated = new Date().toLocaleDateString('zh-CN');
+    D.lastUpdated = REPORT_DATA.lastUpdated || new Date().toLocaleDateString('zh-CN');
 
     document.getElementById('statusDot').classList.remove('offline');
     document.getElementById('updateTime').textContent = `数据更新于 ${D.lastUpdated}`;
